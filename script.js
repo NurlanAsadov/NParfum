@@ -105,6 +105,12 @@ function getProductImage(product) {
   return encodeImageSrc(product.image);
 }
 
+function getProductImageRaw(product) {
+  const id = String(product.id);
+  if (loadCustomImages()[id] || serverCustomImages[id]) return '';
+  return product.image;
+}
+
 function setCustomImage(productId, dataUrl) {
   const custom = loadCustomImages();
   custom[String(productId)] = dataUrl;
@@ -130,7 +136,7 @@ function renderProducts(filter) {
   grid.innerHTML = filtered.map(p => `
     <div class="product-card">
       <div class="product-image">
-        <img src="${getProductImage(p)}" alt="${p.brand} ${p.name}" loading="lazy" decoding="async"
+        <img src="${getProductImage(p)}" data-raw-src="${getProductImageRaw(p)}" alt="${p.brand} ${p.name}" loading="lazy" decoding="async"
              onerror="handleImageError(this)">
         <div class="image-fallback" style="display:none;">Şəkil yoxdur</div>
         ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
@@ -152,10 +158,14 @@ function renderProducts(filter) {
 }
 
 function handleImageError(img) {
-  const raw = img.dataset.rawSrc || img.getAttribute('src');
-  if (!img.dataset.triedEncode && raw && !raw.startsWith('data:')) {
+  const raw = img.dataset.rawSrc;
+  if (!img.dataset.triedRaw && raw) {
+    img.dataset.triedRaw = '1';
+    img.src = raw;
+    return;
+  }
+  if (!img.dataset.triedEncode && raw) {
     img.dataset.triedEncode = '1';
-    img.dataset.rawSrc = raw;
     img.src = encodeImageSrc(raw);
     return;
   }
@@ -179,7 +189,7 @@ function renderAdminPanel() {
           ${isCustom ? '<span class="admin-custom-badge">Yüklənmiş</span>' : '<span class="admin-default-badge">Standart</span>'}
         </div>
         <div class="admin-preview">
-          <img id="admin-img-${p.id}" src="${src}" alt="${p.name}">
+          <img id="admin-img-${p.id}" src="${src}" data-raw-src="${getProductImageRaw(p)}" alt="${p.name}" onerror="handleImageError(this)">
         </div>
         <div class="admin-meta">
           <div class="admin-brand">${p.brand}</div>
